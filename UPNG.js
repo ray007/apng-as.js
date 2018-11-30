@@ -381,10 +381,15 @@ UPNG._copyTile = function(sb, sw, sh, tb, tw, th, xoff, yoff, mode)
 	return true;
 }
 
-
-
-
-
+/**
+ * @param {Array<ArrayBuffer>} bufs array of frames. A frame is an ArrayBuffer containing the pixel data (RGBA, 8 bits per channel)
+ * @param {number} w width
+ * @param {number} h height
+ * @param {?} ps
+ * @param {Array<number>} [dels=null] array of delays for each frame (only when 2 or more frames)
+ * @param {?boolean=} [forbidPlte=false]
+ * @returns {ArrayBuffer} binary data of a PNG file
+ */
 UPNG.encode = function(bufs, w, h, ps, dels, forbidPlte)
 {
 	if(ps==null) ps=0;
@@ -396,6 +401,17 @@ UPNG.encode = function(bufs, w, h, ps, dels, forbidPlte)
 	return UPNG.encode._main(nimg, w, h, dels);
 }
 
+/**
+ * low-level encode
+ * @param {Array<ArrayBuffer>} bufs array of frames. A frame is an ArrayBuffer containing the pixel data (RGBA, 8 bits per channel)
+ * @param {number} w width
+ * @param {number} h height
+ * @param {number} cc number of color channels (1 or 3)
+ * @param {number} ac number of alpha channels (0 or 1)
+ * @param {number} depth bit depth of pixel data (1, 2, 4, 8, 16)
+ * @param {Array<number>} [dels=null] array of delays for each frame (only when 2 or more frames)
+ * @returns {ArrayBuffer} binary data of a PNG file
+ */
 UPNG.encodeLL = function(bufs, w, h, cc, ac, depth, dels) {
 	var nimg = {  ctype: 0 + (cc==1 ? 0 : 2) + (ac==0 ? 0 : 4),      depth: depth,  frames: []  };
 	
