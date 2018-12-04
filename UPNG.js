@@ -98,15 +98,18 @@ UPNG.toRGBA8.decodeImage = function(data, w, h, out)
 
 
 
-UPNG.decode = function(buff)
+UPNG.decode = function(buff, noDecompress)
 {
 	var data = new Uint8Array(buff), offset = 8, bin = UPNG._bin, rUs = bin.readUshort, rUi = bin.readUint;
 	var out = {tabs:{}, frames:[]};
-	var dd = new Uint8Array(data.length), doff = 0;	 // put all IDAT data into it
+	var dd, doff = 0;	 // put all IDAT data into it
 	var fd, foff = 0;	// frames
 	
 	var mgck = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 	for(var i=0; i<8; i++) if(data[i]!=mgck[i]) throw "The input is not a PNG file!";
+
+	if (!noDecompress)
+		dd = new Uint8Array(data.length);
 
 	while(offset<data.length)
 	{
@@ -114,9 +117,15 @@ UPNG.decode = function(buff)
 		var type = bin.readASCII(data, offset, 4);  offset += 4;
 		//console.log(type,len);
 		
-		if     (type=="IHDR")  {  UPNG.decode._IHDR(data, offset, out);  }
+		if     (type=="IHDR") {
+			UPNG.decode._IHDR(data, offset, out);
+		}
 		else if(type=="IDAT") {
-			for(var i=0; i<len; i++) dd[doff+i] = data[offset+i];
+			if (noDecompress) {
+				dd = data.subarray(offset, offset+len);
+			} else {
+				for(var i=0; i<len; i++) dd[doff+i] = data[offset+i];
+			}
 			doff += len;
 		}
 		else if(type=="acTL")  {
@@ -124,8 +133,12 @@ UPNG.decode = function(buff)
 			fd = new Uint8Array(data.length);
 		}
 		else if(type=="fcTL")  {
-			if(foff!=0) {  var fr = out.frames[out.frames.length-1];
-				fr.data = UPNG.decode._decompress(out, fd.slice(0,foff), fr.rect.width, fr.rect.height);  foff=0;
+			if(foff!=0) {
+				var fr = out.frames[out.frames.length-1];
+				if (noDecompress)
+					fr.cimg = fd.subarray(0,foff); //.slice(0,foff);
+				else
+					fr.data = UPNG.decode._decompress(out, fd.slice(0,foff), fr.rect.width, fr.rect.height);  foff=0;
 			}
 			var rct = {x:rUi(data, offset+12),y:rUi(data, offset+16),width:rUi(data, offset+4),height:rUi(data, offset+8)};
 			var del = rUs(data, offset+22);  del = rUs(data, offset+20) / (del==0?100:del);
@@ -192,12 +205,20 @@ UPNG.decode = function(buff)
 		offset += len;
 		var crc = bin.readUint(data, offset);  offset += 4;
 	}
-	if(foff!=0) {  var fr = out.frames[out.frames.length-1];
-		fr.data = UPNG.decode._decompress(out, fd.slice(0,foff), fr.rect.width, fr.rect.height);  foff=0;
+	if(foff!=0) {
+		var fr = out.frames[out.frames.length-1];
+		if (noDecompress)
+			fr.cimg = fd.subarray(0,foff); //.slice(0,foff);
+		else
+			fr.data = UPNG.decode._decompress(out, fd.slice(0,foff), fr.rect.width, fr.rect.height);  foff=0;
 	}	
-	out.data = UPNG.decode._decompress(out, dd, out.width, out.height);
+	if (noDecompress) {
+		out.cimg = dd;
+	} else {
+		out.data = UPNG.decode._decompress(out, dd, out.width, out.height);
+		delete out.compress;  delete out.interlace;  delete out.filter;
+	}
 	
-	delete out.compress;  delete out.interlace;  delete out.filter;
 	return out;
 }
 
@@ -423,6 +444,33 @@ UPNG.encodeLL = function(bufs, w, h, cc, ac, depth, dels) {
 	
 	return UPNG.encode._main(nimg, w, h, dels);
 }
+
+/**
+ * create APNG from multiple images (png)
+ * @param {Array<ArrayBuffer>} imgs array of images
+ * @param {Array<number>} dels array of frame delays
+ */
+UPNG.assemble = function(imgs, dels, w, h) {
+	var nimg = {}, frames = nimg.frames = [], fDecode = UPNG.decode, irreg;
+	imgs.forEach(function(img, i) {
+		var fr = fDecode(img, true);
+		if (!i) { // first frame
+			if (!w) w = fr.width;
+			if (!h) h = fr.height;
+			nimg.ctype = fr.ctype;
+			nimg.depth = fr.depth;
+		}
+		if (w != fr.width || h != fr.height || fr.ctype != nimg.ctype || fr.depth != nimg.depth)
+			irreg = true;
+		// why does decode() not create a rect ???
+		fr.rect = {x:0, y:0, width:fr.width, height:fr.height};
+		frames.push(fr);
+	});
+	// ??? do some postprocessing ???
+	if (irreg)
+		throw Error('non-uniform img formats not yet supported');
+	return UPNG.encode._main(nimg, w, h, dels);
+};
 
 UPNG.encode._main = function(nimg, w, h, dels) {
 	var crc = UPNG.crc.crc, wUi = UPNG._bin.writeUint, wUs = UPNG._bin.writeUshort, wAs = UPNG._bin.writeASCII;
