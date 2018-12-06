@@ -145,7 +145,8 @@ UPNG._bin = {
 	writeUint  : function(buff,p,n){  buff[p]=(n>>24)&255;  buff[p+1]=(n>>16)&255;  buff[p+2]=(n>>8)&255;  buff[p+3]=n&255;  },
 	readASCII  : function(buff,p,l){  var s = "";  for(var i=0; i<l; i++) s += String.fromCharCode(buff[p+i]);  return s;    },
 	writeASCII : function(data,p,s){  for(var i=0; i<s.length; i++) data[p+i] = s.charCodeAt(i);  },
-	readBytes  : function(buff,p,l){  var arr = [];   for(var i=0; i<l; i++) arr.push(buff[p+i]);   return arr;  },
+	//readBytes  : function(buff,p,l){  var arr = [];   for(var i=0; i<l; i++) arr.push(buff[p+i]);   return arr;  },
+	readBytes  : function(buff,p,l){  return buff.subarray(p, p+l); },
 	pad : function(n) { return n.length < 2 ? "0" + n : n; },
 	readUTF8 : function(buff, p, l) {
 		var s = "", ns;
@@ -282,7 +283,8 @@ UPNG.encode = function(nimg, w, h, dels) {
 		var ioff = offset;
 		wAs(data,offset,(j==0)?"IDAT":"fdAT");  offset+=4;
 		if(j!=0) {  wUi(data, offset, fi++);  offset+=4;  }
-		for(var i=0; i<dl; i++) data[offset+i] = imgd[i];
+		//for(var i=0; i<dl; i++) data[offset+i] = imgd[i];
+		data.set(new Uint8Array(imgd), offset);
 		offset += dl;
 		wUi(data,offset,crc(data,ioff,offset-ioff));  offset+=4; // crc
 	}
