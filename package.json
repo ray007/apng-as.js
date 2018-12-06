@@ -1,25 +1,24 @@
 {
-  "name": "upng-js",
-  "description": "Small, fast and advanced PNG / APNG encoder and decoder",
+  "name": "apng-as",
+  "description": "apng assembler from png frames",
   "version": "2.1.0",
-  "homepage": "https://github.com/photopea/UPNG.js",
-  "author": "photopea (https://github.com/photopea)",
+  "homepage": "https://github.com/ray007/apng-as.js",
+  "author": "ray007 (https://github.com/ray007)",
   "contributors": [
     "Scimonster (https://github.com/Scimonster)"
   ],
   "license": "MIT",
-  "repository": "github:photopea/UPNG.js",
+  "repository": "github:ray007/apng-as.js",
   "bugs": {
-    "url": "https://github.com/photopea/UPNG.js/issues"
+    "url": "https://github.com/ray007/apng-as.js/issues"
   },
-  "main": "UPNG",
+  "main": "apng-as",
   "keywords": [
     "png",
     "apng",
     "image",
-    "conversion"
+    "animation"
   ],
   "dependencies": {
-    "pako": "^1.0.5"
   }
 }
