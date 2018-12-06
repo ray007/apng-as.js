@@ -119,6 +119,12 @@ UPNG.decode = function(buff)
 	return out;
 }
 
+/**
+ * helper function to decode junk of type "IHDR"
+ * @param {Uint8Array} data
+ * @param {number} offset
+ * @param {Object} out
+ */
 UPNG.decode._IHDR = function(data, offset, out)
 {
 	var bin = UPNG._bin;
@@ -174,12 +180,17 @@ UPNG.assemble = function(imgs, dels, w, h) {
 	// ??? do some postprocessing ???
 	if (irreg)
 		throw Error('non-uniform img formats not yet supported');
-	return UPNG.encode._main(nimg, w, h, dels);
+	return UPNG.encode(nimg, w, h, dels);
 };
 
-UPNG.encode = {};
-
-UPNG.encode._main = function(nimg, w, h, dels) {
+/**
+ * @param {Object} nimg image descriptor
+ * @param {number=} w width
+ * @param {number=} h height
+ * @param {Array<number>=} dels array of frame delays for apng
+ * @returns {ArrayBuffer} buffer with binary (a)png data
+ */
+UPNG.encode = function(nimg, w, h, dels) {
 	var crc = UPNG.crc.crc, wUi = UPNG._bin.writeUint, wUs = UPNG._bin.writeUshort, wAs = UPNG._bin.writeASCII;
 	var offset = 8, anim = nimg.frames.length>1, pltAlpha = false;
 	
@@ -295,10 +306,14 @@ UPNG.crc = {
 			tab[n] = c;  }
 		return tab;  })(),
 	update : function(c, buf, off, len) {
-		for (var i=0; i<len; i++)  c = UPNG.crc.table[(c ^ buf[off+i]) & 0xff] ^ (c >>> 8);
+		var _tab = UPNG.crc.table;
+		for (var i=0; i<len; i++)
+			c = _tab[(c ^ buf[off+i]) & 0xff] ^ (c >>> 8);
 		return c;
 	},
-	crc : function(b,o,l)  {  return UPNG.crc.update(0xffffffff,b,o,l) ^ 0xffffffff;  }
+	crc : function(b,o,l)  {
+		return UPNG.crc.update(0xffffffff,b,o,l) ^ 0xffffffff;
+	}
 }
 
 })(UPNG);
